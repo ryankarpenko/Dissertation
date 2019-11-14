@@ -1,0 +1,160 @@
+#Glossary
+# e[1:N] QALY values, transformed onto (0,1)
+# c[1:N] Cost values
+# phi.e[1:N] mean of beta distribution
+# tau.e[1:N] scale paratmeter of beta distribution
+# gamma0[1:2] logit mean for pi (prob of being spike), for each treatment arm
+# gamma.age[1:2] coefficient for age vs pi, by arm
+# gamma.sex[1:2] coefficient for sex vs pi, by arm
+# gamma.hard[1:2, 0:4] coefficient for hardman index vs pi, by arm and category
+# alpha0[d 1:2, t 1:2] logit mean for each spike indicator and treatment arm
+# alpha.age[d 1:2, t 1:2] coefficient for age, by each spike indicator and arm
+# cage[1:N] centered age, continuous
+# alpha.sex[d 1:2, t 1:2] coefficient for sex, by each spike indicator and arm
+# sex[1:N] 0 for male, 1 for female (need to adjust this from dataset where it's 1 & 2)
+# alpha.hard[d 1:2, t 1:2, c 0:4] coefficient for hardman index,
+#    for each each spike indicator and arm and for each categorical value, 0-4.
+# hardman[i] Hardman Index. Can be 0,1,2,3,4. Imputed if missing.
+# d[1:N] d=1 means corresponding q value is zero. d=0 otherwise.
+# spike: the value of zero after transformation. 
+# max: maximum value for QALYs, used to un-transform
+# min: minimum value for QALYs, used to un-transform
+model{
+    for(i in 1:N){
+        #Transformed QALYs
+        e[i] ~ dbeta(param1.e[i], param2.e[i])
+        param1.e[i] <- phi.e[i] * tau.e[i]
+	    param2.e[i] <- (1 - phi.e[i]) * tau.e[i]
+        logit(phi.e[i]) <- alpha0[d[i]+1, arm[i]+1] +
+                           alpha.age[d[i]+1, arm[i]+1] * (cage[i]) +
+                           alpha.sex[d[i]+1, arm[i]+1] * (sex[i]) +
+                           alpha.hard[d[i]+1, arm[i]+1, hardman[i]]
+
+        tau.e[i] <- ((phi.e[i]*(1-phi.e[i])) / s2.e[d[i]+1, arm[i]+1]) - 1
+
+        #Costs
+        c[i] ~ dgamma(param1.c[i], tau.c[i])
+        param1.c[i] <- phi.c[i] * tau.c[i]
+        tau.c[i] <- phi.c[i] / pow(s.c[arm[i]+1], 2)
+        log(phi.c[i]) <- beta0[arm[i]+1] +
+                         beta.age[arm[i]+1] * (cage[i]) +
+                         beta.sex[arm[i]+1] * (sex[i]) +
+                         beta.hard[arm[i]+1, hardman[i]] +
+                         beta.q[arm[i]+1] * (q[i] - mu.q[arm[i]+1])
+        
+        #Un-transformed e value. We name it q
+        q[i] <- ((e[i] * (max - min + 0.02)) + (min - 0.01)) + (delta * miss[i])
+    }
+
+    #Hardman Index Imputation sub-model
+    #Code used directly from Mason et al 2018
+    # loop through all patients
+    for(i in 1:N){
+        hardman[i] ~ dcat(P[i,1:maxhard])
+        # loop through Hardman index categories
+        for(g in 1:maxhard) {
+            P[i,g] <- iota[i,g]/sum(iota[i,])
+            log(iota[i,g]) <- kappa0[g] + kappa.age[g] * cage[i] + kappa.sex[g] * sex[i]
+        }
+    }
+    kappa0[1] <- 0 # constraint iota[i,1]=1
+    kappa.age[1] <- 0 # constraint iota[i,1]=1
+    kappa.sex[1] <- 0 # constraint iota[i,1]=1
+    for (g in 2:maxhard) { # loop through Hardman index categories, excluding first category
+        kappa0[g] ~ dnorm(0,0.01)
+        kappa.age[g] ~ dnorm(0,0.01)
+        kappa.sex[g] ~ dnorm(0,0.01)
+    }
+    #End Hardman Index Imputation model (Mason et al, 2018)
+
+    #priors
+
+    delta ~ dunif(-twoSD, 0)
+
+    for(t in 1:2){
+        #define s2.e, s.c
+        s2.e[1, t] <- pow(s.e[1, t], 2)
+        s2.e[2, t] <- pow(s.e[2, t], 2)
+        sqrtv[t] <- pow(mu.e[t] * (1 - mu.e[t]), 0.5) #From Gabrio
+        s.e[1, t] ~ dunif(0,sqrtv[t]) #natural bound on variance of beta
+        s.e[2, t] <- 0.00001
+        s.c[t] ~ dunif(0, 30000)
+
+        #coefficients for QALYs, on the spike
+        alpha0[2, t] <- logit(spike)
+        alpha.age[2, t] <- 0
+        alpha.sex[2, t] <- 0
+        for(j in 1:maxhard){
+            alpha.hard[2, t, j] <- 0
+        }
+
+        #coefficients, non-spike and costs
+        alpha0[1, t] ~ dlogis(0, 1)
+        alpha.age[1, t] ~ dlogis(0, 1)
+        alpha.sex[1, t] ~ dlogis(0, 1)
+        beta0[t] ~ dnorm(0, 0.01)
+        beta.age[t] ~ dnorm(0, 0.01)
+        beta.sex[t] ~ dnorm(0, 0.01)
+        beta.q[t] ~ dnorm(0, 0.01)
+
+        #hardman coefficients
+        alpha.hard[1, t, 1] <- 0
+        beta.hard[t, 1] <- 0
+        for(j in 2:maxhard){
+            #alpha.hard[1, t, j] ~ dnorm(0, 0.01)
+            alpha.hard[1, t, j] ~ dlogis(0, 1)
+            beta.hard[t, j] ~ dnorm(0, 0.01)
+        }
+    }
+
+
+    #Summary and objective measures
+    for(t in 1:2){
+        # weighted marginal mean QALYs
+        mu.e[t] <- (spikePct[t] * spike) +
+                    ((1-spikePct[t]) * ilogit(alpha0[1, t] + 
+                        alpha.age[1, t] * 0 +
+                        alpha.sex[1, t] * femPct +
+                        alpha.hard[1, t, 1] * p.hi.1 +
+                        alpha.hard[1, t, 2] * p.hi.2 +
+                        alpha.hard[1, t, 3] * p.hi.3 +
+                        alpha.hard[1, t, 4] * p.hi.4))
+
+        mu.q[t] <- (mu.e[t] * (max - min + 0.02) + (min - 0.01)) + (delta * missPct[t])
+        mu.c[t] <- exp(beta0[t] +
+                        beta.age[t] * 0 +
+                        beta.sex[t] * femPct +
+                        beta.hard[t, 1] * p.hi.1 +
+                        beta.hard[t, 2] * p.hi.2 +
+                        beta.hard[t, 3] * p.hi.3 +
+                        beta.hard[t, 4] * p.hi.4)
+
+    }
+    for(g in 1:maxhard){
+        mu.i[g] <- exp(kappa0[g] +
+                        kappa.age[g] * 0 +
+                        kappa.sex[g] * femPct)
+        mu.p[g] <- mu.i[g] / sum(mu.i[])
+    }
+
+    n.hi.4 <- sum(step(hardman[] - 3.5))
+    n.hi.3 <- sum(step(hardman[] - 2.5)) - n.hi.4
+    n.hi.2 <- sum(step(hardman[] - 1.5)) - n.hi.4 - n.hi.3
+    n.hi.1 <- N - n.hi.4 - n.hi.3 - n.hi.2
+
+    p.hi.4 <- n.hi.4 / N
+    p.hi.3 <- n.hi.3 / N
+    p.hi.2 <- n.hi.2 / N
+    p.hi.1 <- 1 - p.hi.4 - p.hi.3 - p.hi.2
+
+    # Incremental QALYs and costs
+    delta.q <- mu.q[2] - mu.q[1]
+    delta.e <- mu.e[2] - mu.e[1]
+    delta.c <- mu.c[2] - mu.c[1]
+
+    #(Mason et. al 2018)
+    for(k in 1:Nwtp){
+        inb[k] <- (wtp[k] * delta.q) - delta.c
+        p.ce[k] <- step(inb[k])
+    }
+}
