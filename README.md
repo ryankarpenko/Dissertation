@@ -6,3 +6,13 @@ Supervisors: Dr. Gianluca Baio and Dr. Manuel Gomes
 Details about the clinical trial data and economic recommendations are confidential. For this reason, the dissertation text is unavailable. Screenshots of the plots from the dissertation are available, but the names of the study arms have been removed.
 
 The project included data handling and model setup in R, plots and plots and figures made in R using ggplot2, Bayesian model specifications in JAGS, and the dissertation document itself in RMarkdown and LaTeX.
+
+![Cost Effectiveness Plane](https://github.com/ryankarpenko/Dissertation/blob/master/cost_effectiveness_plane.png?raw=true "Cost-Effectiveness Plane")
+
+![Cost Effectiveness Acceptability Curve](https://github.com/ryankarpenko/Dissertation/blob/master/cost_effectiveness_acceptability_curve.png?raw=true "Cost-Effectiveness Acceptability Curve")
+
+![Posterior Densities](https://github.com/ryankarpenko/Dissertation/blob/master/posterior_densities.png?raw=true "Posterior Densities")
+
+![One Delta MNAR](https://github.com/ryankarpenko/Dissertation/blob/master/one_delta_mnar.png?raw=true "MNAR Robustness Results: One Delta")
+
+![Two Delta MNAR](https://github.com/ryankarpenko/Dissertation/blob/master/two_delta_mnar.png?raw=true "MNAR Robustness Results: Two Deltas")
