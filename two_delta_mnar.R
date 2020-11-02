@@ -26,7 +26,7 @@ bvnDeltas <- ggplot2::ggplot()+ ggplot2::theme(panel.background = ggplot2::eleme
   ggplot2::scale_color_manual(values=c("navy","skyblue2"), labels=c("INB < 0","INB > 0")) +
   ggplot2::geom_label(mapping=ggplot2::aes(x = rep(c(-0.35,-0.25,-0.15,-0.05),4), y=c(rep(-0.05,4),rep(-0.15,4),rep(-0.25,4),rep(-0.35,4)),
                                            label=labels.n), size=2.5) +
-  ggplot2::labs(x="Delta Open Arm", y="Delta EVAR Arm", color="", title="Bivariate Normal")
+  ggplot2::labs(x="Delta ****** Arm", y="Delta ****** Arm", color="", title="Bivariate Normal")
 
 #BG
 set.seed(222)
@@ -55,7 +55,7 @@ bgDeltas <- ggplot2::ggplot()+ ggplot2::theme(panel.background = ggplot2::elemen
   ggplot2::scale_color_manual(values=c("navy","skyblue2"), labels=c("INB < 0","INB > 0")) +
   ggplot2::geom_label(mapping=ggplot2::aes(x = rep(c(-0.35,-0.25,-0.15,-0.05),4), y=c(rep(-0.05,4),rep(-0.15,4),rep(-0.25,4),rep(-0.35,4)),
                                            label=labels.b), size=2.5) +
-  ggplot2::labs(x="Delta Open Arm", y="Delta EVAR Arm", color="", title="Beta-Gamma")
+  ggplot2::labs(x="Delta ****** Arm", y="Delta ****** Arm", color="", title="Beta-Gamma")
 
 set.seed(111)
 temp.delta1.h <- runif(5000, -1 * data$twoSD, 0)
@@ -83,7 +83,7 @@ hurdDeltas <- ggplot2::ggplot()+ ggplot2::theme(panel.background = ggplot2::elem
   ggplot2::scale_color_manual(values=c("navy","skyblue2"), labels=c("INB < 0","INB > 0")) +
   ggplot2::geom_label(mapping=ggplot2::aes(x = rep(c(-0.35,-0.25,-0.15,-0.05),4), y=c(rep(-0.05,4),rep(-0.15,4),rep(-0.25,4),rep(-0.35,4)),
                                            label=labels.h), size=2.5) +
-  ggplot2::labs(x="Delta Open Arm", y="Delta EVAR Arm", color="", title="Hurdle")
+  ggplot2::labs(x="Delta ****** Arm", y="Delta ****** Arm", color="", title="Hurdle")
 
 gridExtra::grid.arrange(bvnDeltas, bgDeltas, hurdDeltas, ncol=1)
 ```
